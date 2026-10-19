@@ -10,10 +10,9 @@ Features and release targets may change during development.
 - Experimental
 
 ## v2.0.0 [In Progress]
-Taget date: 13 - 14 October 2026
 - [x] Review and refactor the existing codebase
 - [ ] Create a tool showcase video
-- [ ] Release
+- [x] Release
 
 ## v2.1.0 [Planned]
 - [ ] Migrate to PySide6
