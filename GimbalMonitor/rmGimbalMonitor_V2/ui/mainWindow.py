@@ -34,8 +34,8 @@ from GimbalMonitor.rmGimbalMonitor_V2.ui.messageSystem import MessageSystem
 # ────────────────── LOGGER  ───────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
 
-ICONS_DIR: Path = Path(__file__).parent.parent / "icons"
-_CONFIG_DIR: Path = Path(__file__).parent.parent / "Config"
+ICONS_DIR: Path = Path(__file__).resolve().parent.parent / "icons"
+_CONFIG_DIR: Path = Path(__file__).resolve().parent.parent / "Config"
 
 def _buildGroupIcons() -> dict[str, Path]: # TODO Як можна покращити функціонал цього методу?
     """
@@ -53,9 +53,9 @@ def _buildGroupIcons() -> dict[str, Path]: # TODO Як можна покращи
 
     # 1. User-set icons from category_icons.json (highest priority)
     custom_icons_json_path: Path = _CONFIG_DIR / "category_icons.json"
-    if Path(custom_icons_json_path).is_file():
+    if custom_icons_json_path.is_file():
         try:
-            with open(custom_icons_json_path, "r") as file:
+            with custom_icons_json_path.open(mode="r", encoding="utf-8") as file:
                 custom_icons = json.load(file)
             for _char_type, cat_icons in custom_icons.items():
                 for cat_name, icon_path in cat_icons.items():
@@ -156,7 +156,7 @@ class MainWindow(QMainWindow):
         # Cached edit-controls window
         self._edit_window: ControlsEditWindow | None = None
         # Triggers check for updates on startup
-        CheckForUpdates(parent=self, show_on_startup=True)
+        CheckForUpdates(parent=self, check_on_startup=True)
 
     # ── "Edit display" action ──────────────────────────────────────────────
     def editDisplay(self) -> None:

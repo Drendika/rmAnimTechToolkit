@@ -1040,7 +1040,8 @@ class ControlsEditWindow(QWidget):
         """Load a JSON config file, falling back to defaults if unavailable."""
         logger.info("Attempting to load config file: %s", filename)
         try:
-            with open(_CONFIG_DIR / filename, "r", encoding="utf-8") as file:
+            path_to_config = _CONFIG_DIR / filename
+            with path_to_config.open(mode="r", encoding="utf-8") as file:
                 data = json.load(file)
                 logger.info("Successfully loaded config file: %s", filename)
                 return data
@@ -1061,8 +1062,9 @@ class ControlsEditWindow(QWidget):
     def _saveConfig(filename: str, data: CategoryMap | CategoryIcons | SkipKeywords):
         """Save data to a JSON config file."""
         logger.info("Attempting to save config file: %s", filename)
+        path_to_config = _CONFIG_DIR / filename
         try:
-            with open(_CONFIG_DIR / filename, "w", encoding="utf=8") as file:
+            with path_to_config.open(mode="w", encoding="utf=8") as file:
                 json.dump(data, file, indent=4)  # 4 spaces = one Tub
                 logger.info("Successfully saved config file: %s", filename)
         except (FileNotFoundError, json.JSONDecodeError) as error:

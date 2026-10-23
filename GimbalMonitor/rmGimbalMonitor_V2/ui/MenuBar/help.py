@@ -22,8 +22,7 @@ from PySide2.QtCore import Qt, QTimer # type: ignore[import-untyped]
 import logging
 from maya import cmds
 from pathlib import Path
-import urllib.request
-import urllib.error
+import urllib.request, urllib.error
 import webbrowser
 import json
 
@@ -50,8 +49,8 @@ class CheckForUpdates:
     a message box either way) and a startup check (silent unless a
     newer version is actually found).
     """
-    def __init__(self, parent: MainWindow | None = None, show_on_startup: bool = False) -> None:
-        if show_on_startup:
+    def __init__(self, parent: MainWindow | None = None, check_on_startup: bool = False) -> None:
+        if check_on_startup:
             self._checkOnStartup(parent)
         else:
             self._checkForUpdatesManual(parent)
@@ -92,10 +91,14 @@ class CheckForUpdates:
                 logger.warning("We couldn't get html_url from GitHub: \"\"")
             return version, release_url
 
+        except urllib.error.HTTPError:
+            # Raised when server returns error
+            logger.warning(f"Server returned error: {urllib.error.HTTPError}")
+            return None, f"Server returned error: {urllib.error.HTTPError}"
         except urllib.error.URLError:
-            # Raised when there's no internet connection or GitHub can't be reached
-            logger.warning(f"No internet connection or GitHub is unreachable: {urllib.error.URLError}")
-            return None, f"No internet connection or GitHub is unreachable: {urllib.error.URLError}"
+                # Raised when there's no internet connection or GitHub can't be reached
+                logger.warning(f"No internet connection or GitHub is unreachable: {urllib.error.URLError}")
+                return None, f"No internet connection or GitHub is unreachable: {urllib.error.URLError}"
 
         except Exception as error:
             logger.error(f"Unexpected error: {error}")
@@ -133,6 +136,9 @@ class CheckForUpdates:
                 f"Current version: {CURRENT_VERSION}, latest version: {latest_version}"
             )
             dialog.exec_()
+        elif self.versionTuple(latest_version) < self.versionTuple(CURRENT_VERSION):
+            logger.debug(f"Current version is bigger then last: "
+                         f"CURRENT_VERSION: {CURRENT_VERSION}, latest_version: {latest_version}")
         else:
             QMessageBox.information(
                 parent, "Up to Date",
@@ -158,10 +164,15 @@ class CheckForUpdates:
                 logger.debug(f"Skipping version: {latest_version}.")
                 return
 
-        if not self.versionTuple(latest_version) > self.versionTuple(CURRENT_VERSION):
+        if self.versionTuple(latest_version) < self.versionTuple(CURRENT_VERSION):
             logger.debug(f"Current version is bigger then last: "
                          f"CURRENT_VERSION: {CURRENT_VERSION}, latest_version: {latest_version}")
             return # return if current version is bigger then last
+        elif self.versionTuple(latest_version) == self.versionTuple(CURRENT_VERSION):
+            logger.debug(f"Version is up to date: {CURRENT_VERSION}")
+            return  # return if current version is equal to the last
+
+
 
         # Delay the popup by 5 seconds so it doesn't interrupt the tool's
         # own startup/UI construction, and appears only once things settle.
@@ -224,7 +235,7 @@ class UIUpdatesNotificationManual(QDialog):
     def _onYes(self, release_url) -> None:
         """Opens the GitHub release page in the user's default browser."""
         logger.debug(f"Updates Manual: User selected: Yes")
-        webbrowser.open(release_url)
+        webbrowser.open_new_tab(release_url)
         logger.debug(f"Opening browser for update: {release_url}")
         self.accept()
 
@@ -281,7 +292,7 @@ class UIUpdatesNotificationStartup(QDialog):
 
     def _onUpdate(self, release_url) -> None:
         """Opens the GitHub release page in the user's default browser."""
-        webbrowser.open(release_url)
+        webbrowser.open_new_tab(release_url)
         logger.debug(f"Updates Startup: User selected: Update")
         logger.debug(f"Updates Startup: Opening browser for update: {release_url}")
         self.accept()
@@ -363,13 +374,11 @@ class ContactWindow(QDialog):
         self.accept()
 
 
-ICONS_DIR = Path(__file__).parent.parent.parent / "icons"
+ICONS_DIR = Path(__file__).resolve().parent.parent.parent / "icons"
 ICON_DEFAULT_PATH = ICONS_DIR / "Logo_GMv2.png"
-ICON_DEFAULT = QIcon(str(ICON_DEFAULT_PATH))
-# NOTE: this is rebuilt again in the __main__ block below, since QIcon
-# requires a QApplication to already exist — this module-level instance
-# only works correctly when the tool is loaded through Maya (where a
-# QApplication already exists via Maya's own Qt event loop).
+
+def get_icon_default() -> QIcon:
+    return QIcon(str(ICON_DEFAULT_PATH))
 
 class AboutWindow(QDialog):
     """
@@ -393,7 +402,7 @@ class AboutWindow(QDialog):
         # ── Icon ─────────────────────────────────────────────────────────────
         main_v_layout.addLayout(main_h_layout)
         icon_label = QLabel()
-        icon_label.setPixmap(ICON_DEFAULT.pixmap(96, 96))
+        icon_label.setPixmap(get_icon_default().pixmap(96, 96))
         main_h_layout.addWidget(icon_label)
         main_h_layout.addSpacing(15)
         main_h_layout.addLayout(layout_v_text)
@@ -446,12 +455,12 @@ class AboutWindow(QDialog):
         self.accept()
 
 if __name__ == "__main__":
-    # If you gonna use code in the IDE, comment out all Maya relates stuff(cmds, pymel, etc.)
-    # and comment out QIcon or place it after the QApplication instance
+    # If you want to use this file inside PyCharm:
+    # 1) Comment-out all Maya related modules
+    # 2) Change interpreter from mayapy.exe to Python
+    # This way you can use any file inside PyCharm
     app = QApplication([])
 
-    ICON_DEFAULT = QIcon(str(ICON_DEFAULT_PATH))
+    window = CheckForUpdates(check_on_startup=False)
 
-    window = CheckForUpdates(show_on_startup=False)
-
-    #app.exec_()
+    app.exec_()

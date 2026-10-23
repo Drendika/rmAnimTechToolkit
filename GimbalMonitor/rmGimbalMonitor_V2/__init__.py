@@ -7,8 +7,8 @@ from .logger_setup import setupLogger
 
 logger = setupLogger(__name__)
 
-logger.info(f"Log file created, {cmds.about(ctime=True)}")
-logger.info(f"Maya version: {cmds.about(installedVersion=True)}")
-logger.info(f"Qt version: {cmds.about(qtVersion=True)}")
-logger.info(f"Connection to the Internet: {cmds.about(connected=True)}")
-logger.info(f"Operating System: {cmds.about(operatingSystem=True)}")
+logger.info("Log file created, %s", cmds.about(ctime=True).rstrip("\r\n"))
+logger.info("Maya version: %s",cmds.about(installedVersion=True))
+logger.info("Qt version: %s", cmds.about(qtVersion=True))
+logger.info("Connection to the Internet: %s", cmds.about(connected=True))
+logger.info("Operating System: %s", cmds.about(operatingSystem=True))

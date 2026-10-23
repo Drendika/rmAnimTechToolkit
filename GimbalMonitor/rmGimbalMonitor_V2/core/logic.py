@@ -4,12 +4,15 @@ Calculations and sorting for UI.
 """
 
 from __future__ import annotations
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 import json
 import logging
 import math
 from pathlib import Path
-from typing import Any
 
 import maya.api.OpenMaya as OpenMaya
 import maya.cmds as cmds
@@ -66,17 +69,17 @@ def _load_json(filename: str) -> Any:
     filepath: Path = CONFIG_DIR / filename
 
     if not filepath.is_file():
-        logger.critical(f"Build-in JSON file not found: {filepath}")
-        raise FileNotFoundError(f"Built-in config file not found: {filepath}")
+        logger.critical("Build-in JSON file not found: %s", filepath)
+        raise FileNotFoundError("Build-in JSON file not found: %s", filepath)
 
-    with open(filepath, "r") as file:
+    with filepath.open(mode="r", encoding="utf-8") as file:
         return json.load(file)
 
 def load_category_map() -> dict[str, dict[str, list[str]]]:
-    return _load_json("category_map.json")
+    return _load_json(filename="category_map.json")
 
 def load_skip_keywords() -> list[str]:
-    return _load_json("skip_keywords.json")
+    return _load_json(filename="skip_keywords.json")
 
 
 def reloadConfig() -> None:
@@ -84,11 +87,19 @@ def reloadConfig() -> None:
     CATEGORY_MAP = load_category_map()
     SKIP_KEYWORDS = load_skip_keywords()
 
-CONFIG_DIR = Path(__file__).parent.parent / "Config"
+CONFIG_DIR = Path(__file__).resolve().parent.parent / "Config"
 CATEGORY_MAP = load_category_map()
 SKIP_KEYWORDS = load_skip_keywords()
 
 
+def trim_control_name(ctrl: str, *, sorting: bool) -> str:
+    """
+    Takes the full control name and cuts out only the actual name of the control.
+    Makes the control name lowercase for sorting.
+    """
+    if sorting:
+        return ctrl.lower().split(":")[-1].split("|")[-1]
+    return ctrl.split(":")[-1].split("|")[-1]
 
 def shouldSkipControl(ctrl: str) -> bool:
     """
@@ -96,14 +107,13 @@ def shouldSkipControl(ctrl: str) -> bool:
     Strips namespaces and DAG paths before evaluating.
     Skip - True; Go further - False.
       """
-    only_name: str = ctrl.split(":")[-1].split("|")[-1]
-    ctrl_lower: str = only_name.lower()
-    if any(keyword in ctrl_lower for keyword in SKIP_KEYWORDS):
+    ctrl_to_check = trim_control_name(ctrl, sorting=True)
+    if any(keyword in ctrl_to_check for keyword in SKIP_KEYWORDS):
         return True
     return False
 
 
-def categorizeAllControls(controls: list[str], charType: str) -> dict[str, list[str]]:
+def categorizeAllControls(controls: list[str], charType: Literal["Quadruped", "Bipedal"]) -> dict[str, list[str]]:
     """
     Groups controls into predefined categories based on the character type.
     Skips ignored controls or those with all rotation axes locked.
@@ -115,7 +125,8 @@ def categorizeAllControls(controls: list[str], charType: str) -> dict[str, list[
 
     for ctrl in controls:
         if shouldSkipControl(ctrl):
-            logger.debug(f"Skipping control: {ctrl} (skip list)")
+            logger.debug("Skipping control: %s. Control is in the skip list.",
+                         trim_control_name(ctrl, sorting=False))
             continue # Skip the current loop and start the next one
 
         # If control's rotations are locked, control is skipped.
@@ -125,17 +136,17 @@ def categorizeAllControls(controls: list[str], charType: str) -> dict[str, list[
                 cmds.getAttr(f"{ctrl}.rotateZ", lock=True)
         )
         if all_locked:
-            logger.debug(f"Skipping control: {ctrl} (rotations are locked)")
+            logger.debug("Skipping control: %s. All rotations are locked.",
+                         trim_control_name(ctrl, sorting=False))
             continue
 
-        only_name = ctrl.split(":")[-1].split("|")[-1] # TODO Зроби тут одну функцію
-        ctrl_lower = only_name.lower()
+        ctrl_to_check = trim_control_name(ctrl, sorting=True)
         matched = False
 
         # Sorting
         # TODO -- Покращиш цикл, бо це жах.
         for group_name, keywords in category_map.items():
-            if any(keyword in ctrl_lower for keyword in keywords):
+            if any(keyword in ctrl_to_check for keyword in keywords):
                 grouped[group_name].append(ctrl)
                 matched = True
                 break

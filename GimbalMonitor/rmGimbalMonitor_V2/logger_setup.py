@@ -5,8 +5,9 @@ Logging system for the entire tool.
 
 import logging
 from pathlib import Path
+import sys
 
-_LOG_DIR: Path = Path(__file__).parent / "Logs"
+_LOG_DIR: Path = Path(__file__).resolve().parent / "Logs"
 _LOG_PATH: Path = _LOG_DIR / "GimbalMonitor_LOG.log"
 
 def setupLogger(name: str) -> logging.Logger:
@@ -28,16 +29,52 @@ def setupLogger(name: str) -> logging.Logger:
 
     fileHandler = logging.FileHandler(_LOG_PATH, mode="w")
     fileHandler.setLevel(logging.DEBUG) # TODO Зміни перед релізом
-    fileHandlerFormatter = logging.Formatter("%(levelname)s: [%(filename)s:%(lineno)d]: %(message)s")
-    # fileHandlerFormatter = logging.Formatter('%(levelname)s: %(filename)s: %(message)s %(asctime)s',
-    #                               datefmt='%d/%m/%Y %H:%M:%S')
+    fileHandlerFormatter = logging.Formatter(
+        "[%(asctime)s] %(levelname)s: %(filename)s|L%(lineno)d — %(message)s", datefmt="%H:%M:%S"
+    )
     fileHandler.setFormatter(fileHandlerFormatter)
     logger.addHandler(fileHandler)
 
-    streamHandler = logging.StreamHandler()
-    streamHandler.setLevel(logging.WARNING) # TODO Зміни перед релізом
+    streamHandler = logging.StreamHandler(sys.stderr)
+    streamHandler.setLevel(logging.DEBUG) # TODO Зміни перед релізом
     streamHandlerFormatter = logging.Formatter("%(levelname)s: %(message)s")
     streamHandler.setFormatter(streamHandlerFormatter)
     logger.addHandler(streamHandler)
 
     return logger
+
+# TODO Виріши що все ж таки використовувати, dictConfig чи вже як є?
+""" 
+logging_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "fileHandlerFormatter": {
+            "format": "%(levelname)s: [%(filename)s:%(lineno)d]: %(message)s",
+        },
+        "streamHandlerFormatter": {
+            "format": "%(levelname)s: [%(filename)s:%(lineno)d]: %(message)s",
+        }
+
+    },
+    "handlers": {
+        "fileHandlerFormatter": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "fileHandlerFormatter",
+            "stream": "ext://sys.stderr",
+            "maxBytes": 10000000, # 10 MB
+            "backupCount": 5,
+            "level": "DEBUG",
+        },
+        "streamHandler": {
+            "class": "logging.StreamHandler",
+            "formatter": "streamHandlerFormatter",
+            "stream": "ext://sys.stdout",
+            "level": "DEBUG",
+        }
+    },
+    "loggers": {
+        "root": {"level": "DEBUG", "handlers": ["fileHandlerFormatter", "streamHandler"]},
+    }
+}
+"""
