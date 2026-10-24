@@ -663,7 +663,7 @@ class AddCategoryDialogue(QDialog):
         self.setWindowTitle("Add New Category")
         self.setFixedSize(390, 210)
 
-        self._icon_path = ""
+        self._new_icon_path = ""
         self._result: None | tuple[str, str] = None
 
         main = QHBoxLayout(self)
@@ -759,8 +759,8 @@ class AddCategoryDialogue(QDialog):
             "Image files (*.png *.jpg *.bmp *.svg);;All files (*)"
         )
         if path:
-            self._icon_path = path
             new_path = str(ICONS_DIR / Path(path).name)
+            self._new_icon_path = new_path
             shutil.copy(path, new_path)
 
             pix_map = QPixmap(new_path)
@@ -768,6 +768,8 @@ class AddCategoryDialogue(QDialog):
                 self._icon_preview.setPixmap(
                     pix_map.scaled(76, 72, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 )
+            else:
+                logger.warning("QPixmap is Null. Path: %s", new_path)
 
     def _updatePreview(self, text) -> None:
         self._name_preview.setText(text.strip() if text.strip() else "name")
@@ -778,7 +780,7 @@ class AddCategoryDialogue(QDialog):
             QMessageBox.warning(self, "Missing Name", "Please enter a category name.")
             logger.warning("Category name is not entered")
             return
-        self._result = (name, self._icon_path)
+        self._result = (name, self._new_icon_path)
         self.accept()
 
     def getResult(self) -> None | tuple[str, str]:
